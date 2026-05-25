@@ -3,7 +3,9 @@
 // production, group scores) and add our Cursor parser and bilingual language split.
 
 import * as E from "../engine/dist/engine.mjs";
-import { parseCursorSessions } from "./cursor-sessions.ts";
+import { statSync, readdirSync } from "node:fs";
+import { join, extname } from "node:path";
+import { parseCursorSessions, CURSOR_SOURCES } from "./cursor-sessions.ts";
 import { buildProjectInstrNames, markInstructions } from "./instructions.ts";
 import { detectLang } from "./nlp/lang.ts";
 import * as C from "./catalog.ts";
@@ -175,14 +177,54 @@ export interface ParsedData {
 
 // The expensive part (~50s): parse all logs + Cursor + sanitize. Runs ONCE, the
 // result is cached in memory; per-period analysis is built from it quickly.
-export async function parseAll(): Promise<ParsedData> {
+// Register the engine's builtin rules/metrics. Idempotent — safe to call on
+// both the parse path and the disk-cache load path (where parseAll is skipped).
+export function ensureEngineReady(): void {
   E.registerAllBuiltinRules();
   E.registerAllBuiltinMetrics();
+}
+
+export async function parseAll(): Promise<ParsedData> {
+  ensureEngineReady();
   const pr = await E.parseAllLogsAsync(E.findLogsDirs());
   const sessions = sanitizeSessions([...pr.sessions, ...parseCursorSessions()]);
   // Set customInstructions for projects that have instruction files (all sources).
   markInstructions(sessions, buildProjectInstrNames());
   return { sessions, editLocIndex: pr.editLocIndex, workspaces: pr.workspaces };
+}
+
+// Every file the parse reads: the engine's log dirs + the Cursor DB / workspaces.
+export function sourceRoots(): string[] {
+  return [...E.findLogsDirs(), ...CURSOR_SOURCES];
+}
+
+// Only content files count toward the fingerprint: the SQLite stores and the
+// chat JSON/JSONL the parser actually reads. We deliberately skip SQLite's -wal
+// / -shm sidecars and editor caches (e.g. cursor-retrieval), which churn every
+// few seconds while an editor is open and would otherwise invalidate the cache
+// needlessly. Trade-off: brand-new chats sitting only in an un-checkpointed -wal
+// won't bump the signature until SQLite checkpoints — a manual refresh (fresh=1)
+// always forces a reparse.
+const SIG_EXT = new Set([".vscdb", ".json", ".jsonl"]);
+
+// Cheap fingerprint of all parse inputs (stat-only walk, ~0.1s). Bumps when any
+// content file is added, removed, appended to, or resized — so the disk cache
+// can tell whether a reparse is needed without reading anything.
+export function sourcesSignature(): string {
+  let files = 0, bytes = 0, maxM = 0;
+  const walk = (p: string): void => {
+    let st;
+    try { st = statSync(p); } catch { return; }
+    if (st.isDirectory()) {
+      let entries: string[];
+      try { entries = readdirSync(p); } catch { return; }
+      for (const e of entries) walk(join(p, e));
+    } else if (SIG_EXT.has(extname(p))) {
+      files++; bytes += st.size; if (st.mtimeMs > maxM) maxM = st.mtimeMs;
+    }
+  };
+  for (const r of sourceRoots()) walk(r);
+  return `${files}-${bytes}-${Math.round(maxM)}`;
 }
 
 export function analyze(parsed: ParsedData, from = 0, to = Infinity, label = "all time", lang: Lang = "ru"): VibeAnalysis {

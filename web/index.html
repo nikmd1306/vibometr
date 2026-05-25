@@ -190,6 +190,8 @@ const I18N={
     codeByLang:"По языкам", codeProjects:"Проекты по запросам",
     actMode:"Режим работы", actByHour:"Активность по часам · 0–23", actNight:"ночью 0–5", actWeekend:"на выходных", actByDay:"Запросы по дням (последние 60)", actTopProjects:"Топ проектов по активности",
     recalc:"пересчёт", updated:"обновлено",
+    secs:" с", loadStages:["читаю логи Claude · Codex…","разбираю историю Cursor…","прогоняю 45 правил…"],
+    loadHint:"первый запуск дольше — потом мгновенно",
   },
   en:{
     brand:"Vibometr", sub:"vibe-coding meter", title:"Vibometr · vibe-coding meter",
@@ -207,6 +209,8 @@ const I18N={
     codeByLang:"By language", codeProjects:"Projects by requests",
     actMode:"Work rhythm", actByHour:"Activity by hour · 0–23", actNight:"night 0–5", actWeekend:"on weekends", actByDay:"Requests by day (last 60)", actTopProjects:"Top projects by activity",
     recalc:"recalculating", updated:"updated",
+    secs:"s", loadStages:["reading Claude · Codex logs…","parsing Cursor history…","running 45 rules…"],
+    loadHint:"the first run is slower — instant after that",
   },
 };
 const t=(k)=> (I18N[LANG][k] ?? I18N.ru[k] ?? k);
@@ -376,18 +380,35 @@ function onPeriod(p){
   if(p==="custom"){ PERIOD="custom"; buildPeriods(); return; } // show date fields, wait for OK
   PERIOD=p; buildPeriods(); load();
 }
+// Cold-start progress: an elapsed timer + a stage hint matched to the real
+// timeline (logs → Cursor → rules). Only shown on the full-screen loader, not
+// on period switches (which are background-warmed and usually instant anyway).
+let progTimer=null;
+function startProgress(){
+  const box=document.querySelector("#app .loading");
+  if(!box) return;
+  const t0=Date.now();
+  const sub=document.createElement("div");
+  sub.style.cssText="margin-top:18px;font-size:12px;color:var(--ink-faint);letter-spacing:.06em;line-height:1.7";
+  box.appendChild(sub);
+  const tick=()=>{ const e=Math.floor((Date.now()-t0)/1000),s=I18N[LANG].loadStages,i=e<7?0:e<35?1:2;
+    sub.innerHTML=`${s[i]} · ${e}${t("secs")}<br><span style="opacity:.6">${t("loadHint")}</span>`; };
+  tick(); progTimer=setInterval(tick,250);
+}
+function stopProgress(){ if(progTimer){clearInterval(progTimer);progTimer=null;} }
 function load(){
   const app=document.getElementById("app");
   app.classList.add("period-loading");
+  startProgress();
   const lbl=PERIOD==="custom"?t("p_customLabel"):t("p_"+PERIOD);
   document.getElementById("genat").textContent=t("recalc")+" · "+lbl+"…";
   fetch(periodUrl()).then(r=>r.json()).then(d=>{
     if(d.error) throw new Error(d.error);
-    DATA=d; app.classList.remove("period-loading");
+    stopProgress(); DATA=d; app.classList.remove("period-loading");
     document.getElementById("genat").textContent=t("updated")+" "+new Date(d.generatedAt).toLocaleString(LANG==="ru"?"ru-RU":"en-US")+" · "+d.range.label;
     document.getElementById("meta").innerHTML=LANG==="ru"?`строк кода от ИИ <b>${fmt(d.code.aiLoc)}</b> · локально, без телеметрии`:`AI lines of code <b>${fmt(d.code.aiLoc)}</b> · local, no telemetry`;
     showTab(TAB);
-  }).catch(e=>{ app.classList.remove("period-loading"); app.innerHTML=`<div class="loading">${t("loadError")}<br><br><span style="font-size:12px;color:var(--ink-faint)">${esc(String(e))}</span></div>`; });
+  }).catch(e=>{ stopProgress(); app.classList.remove("period-loading"); app.innerHTML=`<div class="loading">${t("loadError")}<br><br><span style="font-size:12px;color:var(--ink-faint)">${esc(String(e))}</span></div>`; });
 }
 
 // Apply static labels and (re)wire tabs / periods / language toggle for the current language.

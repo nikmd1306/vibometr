@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join, extname, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getAnalysis, compute, invalidate, readDiskCache, type Period } from "./cache.ts";
+import { getAnalysis, compute, invalidate, warm, isParsedCached, type Period } from "./cache.ts";
 import type { Lang } from "./catalog.ts";
 
 const DAY = 86400000;
@@ -20,29 +20,42 @@ const PERIOD_LABEL: Record<string, Record<Lang, string>> = {
   custom: { ru: "произвольный период", en: "custom range" },
 };
 
+// The fixed presets and their date windows (custom is handled separately).
+const PRESET_FROM: Record<string, () => number> = {
+  all: () => 0,
+  "1y": () => Date.now() - 365 * DAY,
+  "6m": () => Date.now() - 183 * DAY,
+  "3m": () => Date.now() - 91 * DAY,
+  "1m": () => Date.now() - 30 * DAY,
+};
+
+function makePeriod(base: string, from: number, to: number, lang: Lang, keySuffix = base): Period {
+  return { key: `${keySuffix}-${lang}`, from, to, label: PERIOD_LABEL[base][lang], lang };
+}
+
 // ?period=all|1y|6m|3m|1m|custom (+ from/to for custom) & ?lang=ru|en → date window.
 function resolvePeriod(params: URLSearchParams): Period {
-  const now = Date.now();
   const lang: Lang = params.get("lang") === "en" ? "en" : "ru";
-  const make = (base: string, from: number, to: number, keySuffix = base): Period => ({
-    key: `${keySuffix}-${lang}`,
-    from,
-    to,
-    label: PERIOD_LABEL[base][lang],
-    lang,
-  });
-  switch (params.get("period")) {
-    case "1y": return make("1y", now - 365 * DAY, Infinity);
-    case "6m": return make("6m", now - 183 * DAY, Infinity);
-    case "3m": return make("3m", now - 91 * DAY, Infinity);
-    case "1m": return make("1m", now - 30 * DAY, Infinity);
-    case "custom": {
-      const from = Date.parse(params.get("from") || "") || 0;
-      const to = Date.parse(params.get("to") || "") || now;
-      return make("custom", from, to, `c_${from}_${to}`);
-    }
-    default: return make("all", 0, Infinity);
+  const period = params.get("period") || "all";
+  if (period === "custom") {
+    const from = Date.parse(params.get("from") || "") || 0;
+    const to = Date.parse(params.get("to") || "") || Date.now();
+    return makePeriod("custom", from, to, lang, `c_${from}_${to}`);
   }
+  const base = PRESET_FROM[period] ? period : "all";
+  return makePeriod(base, PRESET_FROM[base](), Infinity, lang);
+}
+
+// Every preset × both languages — the set we precompute in the background.
+// Smallest windows first: each analysis briefly blocks the event loop, so doing
+// the cheap ones first keeps any concurrent user request from waiting long.
+const WARM_ORDER = ["1m", "3m", "6m", "1y", "all"];
+function standardPeriods(): Period[] {
+  const out: Period[] = [];
+  for (const lang of ["ru", "en"] as Lang[])
+    for (const base of WARM_ORDER)
+      out.push(makePeriod(base, PRESET_FROM[base](), Infinity, lang));
+  return out;
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -69,6 +82,8 @@ const server = createServer(async (req, res) => {
       const data = fresh ? await compute(period) : await getAnalysis(period);
       res.writeHead(200, { "content-type": MIME[".json"] });
       res.end(JSON.stringify(data));
+      // Then warm the other presets/languages in the background (idempotent).
+      void warm(standardPeriods());
     } catch (e) {
       res.writeHead(500, { "content-type": MIME[".json"] });
       res.end(JSON.stringify({ error: String(e) }));
@@ -95,6 +110,6 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  const warm = readDiskCache() ? "warm cache" : "cold start (~30s for the first run)";
-  console.log(`\n  VIBOMETR running → http://localhost:${PORT}  (${warm})\n`);
+  const state = isParsedCached() ? "warm cache" : "cold start (~40s for the first run)";
+  console.log(`\n  VIBOMETR running → http://localhost:${PORT}  (${state})\n`);
 });

@@ -20,9 +20,23 @@ npm run build:engine   # rebuild the vendored engine → engine/dist/engine.mjs 
 Dev loop and its gotchas:
 - **After editing `engine/core/**` → `npm run build:engine`.** The engine is bundled by esbuild into one ESM file; it can't be imported by node directly (extension-less imports + reads its rules via `__dirname`). The markdown rules/metrics in `engine/core/{rules,metrics}` are copied into `engine/dist` at build time and read at runtime, so even rule-only edits need a rebuild to take effect.
 - **After editing `src/**` → restart the server** (`pkill -f server.ts`, then `npm run serve`): `src/` modules are cached in the process.
-- The expensive parse (`parseAll`, ~50s) is memoized in memory + on disk (`$TMPDIR/vibometr/analysis-v3-<period>-<lang>.json`). To reset and reparse, hit the API with `?fresh=1` (calls `invalidate()`), or delete the cache files.
+- To reset and reparse, hit the API with `?fresh=1` (calls `invalidate()`, which wipes the whole disk cache), or delete `$TMPDIR/vibometr/`.
 
 API: `GET /api/analysis?period=all|1y|6m|3m|1m|custom[&from=&to=]&lang=ru|en[&fresh=1]`. `3m` = `now − 91 days`. **The dashboard always loads `all` on first paint — it does not apply a `?period=` URL param** (periods are switched by the in-page buttons).
+
+### Caching (`src/cache.ts`)
+
+The cold path is ~40–50s, dominated by the **Cursor SQLite parse (~27s, ~260k bubble rows)** + the engine's log parse + `analyze(all)` (~11s). Three layers keep that off the critical path:
+
+1. **Parsed model on disk** — `parseAll()`'s result (`parsed-v1.json`, ~90 MB) is persisted, keyed by a cheap source fingerprint (`sourcesSignature()`: a stat-only walk summing `files-bytes-maxMtime` over content files). A restart with unchanged logs **skips the ~33s parse** and only re-runs `analyze`. `workspaces` and `editLocIndex` are `Map`s (nested) — (de)serialized as entry arrays in `cache.ts`.
+2. **Per-period analyses on disk** — `analysis-v3-<period>-<lang>.json`, one per `(period, lang)`.
+3. **Background warm** — after the first response, the server precomputes every preset × both languages (`warm()` in `cache.ts`, smallest window first, yielding the event loop between each), so later period/language switches are instant.
+
+Signature gotchas:
+- The fingerprint counts only **content files** (`.vscdb`, `.json`, `.jsonl`) and deliberately ignores SQLite's `-wal`/`-shm` sidecars and editor caches — those churn every few seconds while an editor is open and would invalidate the cache on every restart. Trade-off: a brand-new chat sitting only in an un-checkpointed `-wal` won't bump the signature until SQLite checkpoints; `?fresh=1` always forces a full reparse.
+- On any signature change, the **entire** disk cache (parse + all analyses) is wiped — this is what keeps a stale per-period analysis from outliving a log change.
+
+**The engine is non-deterministic and mutates its input** (`analyze()` on two identical inputs gives token totals that differ by ~0.03%). This is a property of the vendored engine, not the cache; the per-period disk cache freezes the first result, so what the user sees is stable.
 
 ## Architecture
 

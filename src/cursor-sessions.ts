@@ -13,6 +13,9 @@ const CURSOR_USER = join(homedir(), "Library/Application Support/Cursor/User");
 const DB = join(CURSOR_USER, "globalStorage/state.vscdb");
 const WS_ROOT = join(CURSOR_USER, "workspaceStorage");
 
+// Cursor parse inputs — used by the cache to fingerprint sources for invalidation.
+export const CURSOR_SOURCES = [DB, WS_ROOT];
+
 // Cursor tools that mean a file edit (→ editedFiles).
 const EDIT_TOOLS = new Set(["edit_file", "reapply", "delete_file", "search_replace", "create_file"]);
 
