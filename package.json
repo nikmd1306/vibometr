@@ -1,0 +1,52 @@
+{
+  "name": "vibometr",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Vibometr measures your vibe-coding. Reads your local Claude Code / Codex / Cursor logs and scores them — nothing ever leaves your machine.",
+  "bin": {
+    "vibometr": "./bin/vibometr.mjs"
+  },
+  "scripts": {
+    "start": "node bin/vibometr.mjs",
+    "serve": "node src/server.ts",
+    "build:engine": "node engine/build.mjs",
+    "prepare": "node engine/build.mjs"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "license": "MIT",
+  "author": "nikmd1306",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikmd1306/vibometr.git"
+  },
+  "homepage": "https://github.com/nikmd1306/vibometr#readme",
+  "bugs": {
+    "url": "https://github.com/nikmd1306/vibometr/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "cursor",
+    "ai-coding",
+    "vibe-coding",
+    "analytics",
+    "dashboard"
+  ],
+  "files": [
+    "bin",
+    "src",
+    "web",
+    "engine"
+  ],
+  "dependencies": {
+    "bad-words-next": "^3.2.0",
+    "franc": "^6.2.0",
+    "leo-profanity": "^1.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}

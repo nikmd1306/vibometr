@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vibometr</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#0a0b0e; --bg-2:#101218; --panel:#14161d; --line:#262a34; --line-2:#333845;
+    --ink:#ece9e0; --ink-dim:#9aa1b0; --ink-faint:#5f6675;
+    --lime:#b6ff3c; --amber:#ffb020; --red:#ff4d4d; --orange:#ff8a3c;
+    --ru:#ff5a6e; --en:#4da6ff; --mixed:#b07cff; --glow:var(--lime); --r:14px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html { scroll-behavior:smooth; }
+  body { background: radial-gradient(1200px 600px at 70% -10%, #181c26 0%, transparent 60%), radial-gradient(900px 500px at 10% 10%, #15171f 0%, transparent 55%), var(--bg); color:var(--ink); font-family:"IBM Plex Sans",system-ui,sans-serif; line-height:1.5; min-height:100vh; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+  body::after { content:""; position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:.04; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .wrap { max-width:1180px; margin:0 auto; padding:0 24px 120px; }
+  header.top { display:flex; align-items:center; justify-content:space-between; padding:26px 0 18px; }
+  .brand { display:flex; align-items:center; gap:14px; }
+  .brand .mark { width:38px; height:38px; border-radius:9px; border:1px solid var(--line-2); background:radial-gradient(circle at 50% 38%, var(--glow), transparent 62%), #0e1014; box-shadow:0 0 22px -6px var(--glow), inset 0 0 12px -4px var(--glow); position:relative; flex:none; }
+  .brand .mark::before { content:""; position:absolute; left:50%; top:50%; width:2px; height:13px; background:var(--ink); transform:translate(-50%,-90%) rotate(34deg); transform-origin:bottom center; border-radius:2px; }
+  .brand h1 { font-family:"Oswald"; font-weight:700; font-size:23px; letter-spacing:.16em; text-transform:uppercase; }
+  .brand .sub { font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-faint); letter-spacing:.18em; text-transform:uppercase; }
+  .top .meta { font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-faint); text-align:right; letter-spacing:.1em; }
+  .top .meta b { color:var(--ink-dim); font-weight:500; }
+  /* tabs */
+  nav.tabs { display:flex; gap:6px; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50; background:linear-gradient(var(--bg) 75%, transparent); backdrop-filter:blur(8px); padding:6px 0 0; margin-bottom:8px; flex-wrap:wrap; }
+  nav.tabs button { background:none; border:0; border-bottom:2px solid transparent; color:var(--ink-faint); font-family:"Oswald"; font-weight:500; font-size:14px; letter-spacing:.1em; text-transform:uppercase; padding:11px 16px; cursor:pointer; transition:color .2s, border-color .2s; }
+  nav.tabs button:hover { color:var(--ink-dim); }
+  nav.tabs button.active { color:var(--ink); border-bottom-color:var(--glow); }
+  .periods { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .periods button { background:#14161d; border:1px solid var(--line-2); color:var(--ink-faint); font-family:"IBM Plex Mono"; font-size:11px; letter-spacing:.05em; text-transform:uppercase; padding:7px 11px; border-radius:7px; cursor:pointer; transition:color .15s, border-color .15s, background .15s; }
+  .periods button:hover { color:var(--ink-dim); border-color:var(--ink-faint); }
+  .periods button.active { color:#0b0c10; background:var(--glow); border-color:var(--glow); font-weight:600; }
+  .periods input[type=date] { background:#14161d; border:1px solid var(--line-2); color:var(--ink-dim); font-family:"IBM Plex Mono"; font-size:11px; padding:6px 8px; border-radius:7px; color-scheme:dark; }
+  .langtog { display:flex; border:1px solid var(--line-2); border-radius:7px; overflow:hidden; flex:none; }
+  .langtog button { background:#14161d; border:0; color:var(--ink-faint); font-family:"IBM Plex Mono"; font-size:11px; letter-spacing:.05em; padding:7px 10px; cursor:pointer; transition:color .15s, background .15s; }
+  .langtog button:hover { color:var(--ink-dim); }
+  .langtog button.active { color:#0b0c10; background:var(--ink-dim); font-weight:600; }
+  #app.period-loading { opacity:.35; pointer-events:none; transition:opacity .2s; }
+  .seclabel { font-family:"IBM Plex Mono"; font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:var(--ink-faint); display:flex; align-items:center; gap:12px; margin:40px 0 18px; }
+  .seclabel:first-child { margin-top:24px; }
+  .seclabel::before { content:""; width:7px; height:7px; background:var(--glow); box-shadow:0 0 10px var(--glow); border-radius:1px; flex:none; }
+  .seclabel::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); }
+  .panel { background:linear-gradient(180deg,var(--panel),var(--bg-2)); border:1px solid var(--line); border-radius:var(--r); position:relative; overflow:hidden; }
+  .panel::before { content:""; position:absolute; inset:0 0 auto 0; height:1px; background:linear-gradient(90deg,transparent,var(--line-2) 30%,var(--line-2) 70%,transparent); }
+  .panel .cap { font-family:"IBM Plex Mono"; font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:var(--ink-faint); padding:14px 18px 0; display:flex; justify-content:space-between; }
+  .hero { display:grid; grid-template-columns:1.15fr 1fr; gap:20px; }
+  .gauge-panel { padding:8px 8px 22px; display:flex; flex-direction:column; align-items:center; }
+  .gauge-wrap { position:relative; width:100%; max-width:460px; }
+  #gauge { width:100%; height:auto; display:block; }
+  .gauge-center { position:absolute; left:0; right:0; top:56%; text-align:center; transform:translateY(-50%); }
+  .gauge-center .score { font-family:"Oswald"; font-weight:600; font-size:96px; line-height:.9; color:var(--ink); text-shadow:0 0 40px var(--glow); }
+  .gauge-center .score small { font-size:28px; color:var(--ink-faint); font-weight:300; }
+  .gauge-center .verdict { font-family:"Oswald"; font-weight:500; text-transform:uppercase; letter-spacing:.13em; font-size:17px; margin-top:6px; color:var(--glow); }
+  .gauge-foot { font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-faint); letter-spacing:.1em; margin-top:4px; }
+  .hero-side { display:grid; grid-template-rows:auto 1fr; gap:20px; }
+  .kpi-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .kpi { padding:16px 16px 15px; }
+  .kpi .v { font-family:"Oswald"; font-weight:600; font-size:32px; line-height:1; }
+  .kpi .v small { font-size:15px; color:var(--ink-faint); font-weight:300; margin-left:4px; }
+  .kpi .k { font-family:"IBM Plex Mono"; font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint); margin-top:8px; }
+  .harness, .bars-panel { padding:16px 18px 18px; }
+  .row { display:flex; align-items:center; gap:12px; margin:12px 0; }
+  .row .nm { font-family:"IBM Plex Mono"; font-size:12px; width:140px; color:var(--ink-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:none; }
+  .row .nm.narrow { width:78px; }
+  .row .bar { flex:1; height:9px; background:#0d0f14; border-radius:6px; overflow:hidden; border:1px solid var(--line); }
+  .row .bar i { display:block; height:100%; border-radius:6px; width:0; transition:width 1s cubic-bezier(.2,.7,.2,1); }
+  .row .ct { font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink); width:88px; text-align:right; flex:none; }
+  .groups { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  @media (max-width:860px){ .groups { grid-template-columns:1fr 1fr; } }
+  .grp { padding:16px 16px 17px; }
+  .grp .gname { font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-dim); min-height:28px; }
+  .grp .gscore { font-family:"Oswald"; font-weight:600; font-size:40px; line-height:1; margin:6px 0 10px; }
+  .grp .gtrack { height:6px; background:#0d0f14; border-radius:4px; overflow:hidden; border:1px solid var(--line); }
+  .grp .gtrack i { display:block; height:100%; width:0; border-radius:4px; transition:width 1.1s cubic-bezier(.2,.7,.2,1); }
+  .langbar { display:flex; height:46px; border-radius:10px; overflow:hidden; border:1px solid var(--line); }
+  .langbar > div { display:flex; align-items:center; justify-content:center; min-width:0; }
+  .langbar .lb-label { font-family:"IBM Plex Mono"; font-size:11px; color:#0a0b0e; font-weight:600; white-space:nowrap; padding:0 6px; }
+  .lang-leg { display:flex; gap:22px; margin-top:14px; flex-wrap:wrap; }
+  .lang-leg span { font-family:"IBM Plex Mono"; font-size:12px; color:var(--ink-dim); display:flex; align-items:center; gap:7px; }
+  .lang-leg i { width:11px; height:11px; border-radius:3px; }
+  .grid2 { display:grid; grid-template-columns:1.3fr 1fr; gap:16px; }
+  .grid2e { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:860px){ .hero,.grid2,.grid2e { grid-template-columns:1fr; } .gauge-center .score{font-size:80px;} }
+  .daychart { display:flex; align-items:flex-end; gap:2px; height:140px; padding:18px 18px 8px; }
+  .daychart .d { flex:1; min-width:0; background:linear-gradient(180deg,var(--en),#1c3a5a); border-radius:2px 2px 0 0; min-height:2px; height:0; transition:height .8s cubic-bezier(.2,.7,.2,1); opacity:.8; }
+  .daychart.tok .d { background:linear-gradient(180deg,var(--lime),#2c5a16); }
+  .hours .bars { display:flex; align-items:flex-end; gap:3px; height:120px; margin-top:8px; }
+  .hours { padding:18px; }
+  .hours .bars .h { flex:1; background:linear-gradient(180deg,var(--glow),#2c5a16); border-radius:3px 3px 0 0; min-height:2px; height:0; transition:height .9s cubic-bezier(.2,.7,.2,1); opacity:.85; }
+  .hours .bars .h.night { background:linear-gradient(180deg,var(--mixed),#3a2c5a); }
+  .hours .axis { display:flex; justify-content:space-between; font-family:"IBM Plex Mono"; font-size:9.5px; color:var(--ink-faint); margin-top:7px; }
+  .mini2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .ring-card { padding:16px 18px; display:flex; align-items:center; gap:16px; }
+  .ring-card .info .v { font-family:"Oswald"; font-size:30px; font-weight:600; }
+  .ring-card .info .k { font-family:"IBM Plex Mono"; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); }
+  .aps { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:760px){ .aps { grid-template-columns:1fr; } }
+  .ap { padding:16px 17px 15px; border-left:3px solid var(--line-2); }
+  .ap.high { border-left-color:var(--red); } .ap.medium { border-left-color:var(--amber); } .ap.low { border-left-color:var(--en); }
+  .ap .ah { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .ap .ah .nm { font-family:"Oswald"; font-weight:500; text-transform:uppercase; letter-spacing:.05em; font-size:16px; }
+  .ap .ah .sev { font-family:"IBM Plex Mono"; font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; padding:3px 8px; border-radius:5px; border:1px solid var(--line-2); color:var(--ink-dim); white-space:nowrap; }
+  .ap.high .sev { color:var(--red); border-color:var(--red); } .ap.medium .sev { color:var(--amber); border-color:var(--amber); } .ap.low .sev { color:var(--en); border-color:var(--en); }
+  .ap .meta { font-family:"IBM Plex Mono"; font-size:10.5px; color:var(--ink-faint); margin-top:7px; }
+  .ap .fix { font-size:12.5px; color:var(--ink-dim); margin-top:8px; padding-left:12px; border-left:1px solid var(--line); }
+  .ap .pctbar { height:4px; background:#0d0f14; border-radius:3px; margin-top:11px; overflow:hidden; }
+  .ap .pctbar i { display:block; height:100%; width:0; transition:width 1s ease; }
+  .ap.high .pctbar i { background:var(--red); } .ap.medium .pctbar i { background:var(--amber); } .ap.low .pctbar i { background:var(--en); }
+  .statbig { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  @media (max-width:760px){ .statbig { grid-template-columns:1fr; } .aps{grid-template-columns:1fr;} }
+  .statbig .kpi .v { font-size:28px; }
+  .loading { text-align:center; padding:120px 20px; font-family:"IBM Plex Mono"; color:var(--ink-faint); letter-spacing:.1em; }
+  .loading .pulse { width:60px; height:60px; margin:0 auto 22px; border-radius:50%; border:2px solid var(--line-2); border-top-color:var(--glow); animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .reveal { opacity:0; transform:translateY(14px); transition:opacity .5s ease, transform .5s ease; }
+  .reveal.in { opacity:1; transform:none; }
+  footer { margin-top:60px; padding-top:22px; border-top:1px solid var(--line); font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand"><div class="mark"></div><div><h1 id="brandName">Vibometr</h1><div class="sub" id="brandSub"></div></div></div>
+      <div class="periods" id="periods"></div>
+      <div style="display:flex; align-items:center; gap:14px">
+        <div class="langtog"><button data-lang="ru">RU</button><button data-lang="en">EN</button></div>
+        <div class="meta" id="meta"></div>
+      </div>
+    </header>
+    <nav class="tabs" id="tabs"></nav>
+    <div id="app"><div class="loading"><div class="pulse"></div></div></div>
+    <footer><span id="footL"></span><span id="genat"></span></footer>
+  </div>
+<script>
+let LANG = localStorage.getItem("vibometr-lang")==="en" ? "en" : "ru";
+const fmt=(n)=>(n??0).toLocaleString(LANG==="ru"?"ru-RU":"en-US");
+const pct=(x)=>Math.round((x||0)*100);
+const getCSS=(v)=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function scoreColor(s){ if(s>=75)return getCSS("--lime"); if(s>=60)return getCSS("--amber"); if(s>=45)return getCSS("--orange"); return getCSS("--red"); }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function compact(n){ const u=LANG==="ru"?[" млрд"," млн"," тыс"]:["B","M","K"]; if(n>=1e9)return (n/1e9).toFixed(1)+u[0]; if(n>=1e6)return (n/1e6).toFixed(1)+u[1]; if(n>=1e3)return (n/1e3).toFixed(0)+u[2]; return fmt(n); }
+function polar(cx,cy,r,deg){ const a=(deg-90)*Math.PI/180; return [cx+r*Math.cos(a),cy+r*Math.sin(a)]; }
+function arcPath(cx,cy,r,a0,a1){ const [x0,y0]=polar(cx,cy,r,a0),[x1,y1]=polar(cx,cy,r,a1); const large=a1-a0<=180?0:1; return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`; }
+const START=135,SWEEP=270, valToAngle=(v)=>START+(Math.max(0,Math.min(100,v))/100)*SWEEP;
+function buildGauge(score){
+  const cx=230,cy=230,r=178,col=scoreColor(score);
+  document.documentElement.style.setProperty("--glow",col);
+  let ticks="";
+  for(let v=0;v<=100;v+=5){ const a=valToAngle(v),major=v%25===0; const [x0,y0]=polar(cx,cy,r-4,a),[x1,y1]=polar(cx,cy,r-(major?22:13),a);
+    ticks+=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${major?'#7d8694':'#3a3f4c'}" stroke-width="${major?2:1}"/>`;
+    if(major){ const [lx,ly]=polar(cx,cy,r-40,a); ticks+=`<text x="${lx}" y="${ly}" fill="#7d8694" font-family="IBM Plex Mono" font-size="14" text-anchor="middle" dominant-baseline="middle">${v}</text>`; } }
+  const va=valToAngle(score),[nx,ny]=polar(cx,cy,r-30,va),[bx1,by1]=polar(cx,cy,14,va+90),[bx2,by2]=polar(cx,cy,14,va-90);
+  return `<svg id="gauge" viewBox="0 0 460 430" xmlns="http://www.w3.org/2000/svg"><defs>
+    <linearGradient id="arcg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff4d4d"/><stop offset="0.5" stop-color="#ffb020"/><stop offset="1" stop-color="#b6ff3c"/></linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <path d="${arcPath(cx,cy,r,START,START+SWEEP)}" stroke="#1b1e26" stroke-width="16" fill="none" stroke-linecap="round"/>
+    <path id="arcfill" d="${arcPath(cx,cy,r,START,START+SWEEP)}" stroke="url(#arcg)" stroke-width="16" fill="none" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" opacity=".95"/>
+    <g>${ticks}</g>
+    <g id="needle" style="transform-box:fill-box; transform-origin:${cx}px ${cy}px; transform:rotate(${START-va}deg); transition:transform 1.6s cubic-bezier(.16,.84,.3,1);">
+      <polygon points="${bx1} ${by1}, ${bx2} ${by2}, ${nx} ${ny}" fill="${col}" filter="url(#glow)"/>
+      <circle cx="${cx}" cy="${cy}" r="15" fill="#14161d" stroke="${col}" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="5" fill="${col}"/></g></svg>`;
+}
+function ring(p,cssVar){ const dash=2*Math.PI*26; return `<svg width="68" height="68" viewBox="0 0 68 68" style="flex:none"><circle cx="34" cy="34" r="26" fill="none" stroke="#1b1e26" stroke-width="7"/><circle cx="34" cy="34" r="26" fill="none" stroke="var(${cssVar})" stroke-width="7" stroke-linecap="round" stroke-dasharray="${dash}" stroke-dashoffset="${dash}" transform="rotate(-90 34 34)" style="transition:stroke-dashoffset 1.2s ease" data-ring="${dash-dash*p/100}"/></svg>`; }
+function barRows(items, opt){ const max=Math.max(...items.map(opt.val),1); return items.map(it=>`<div class="row"><span class="nm ${opt.narrow?'narrow':''}">${esc(opt.name(it))}</span><span class="bar"><i style="background:${opt.color||'linear-gradient(90deg,#3a6cff,#8fd0ff)'}" data-w="${opt.val(it)/max*100}"></i></span><span class="ct">${opt.label(it)}</span></div>`).join(""); }
+function dayChart(items, valKey, tok){ const arr=items.slice(-60); const max=Math.max(...arr.map(x=>x[valKey]),1); return `<div class="daychart ${tok?'tok':''}">${arr.map(x=>`<div class="d" data-hh="${x[valKey]/max*100}" title="${x.date}: ${fmt(x[valKey])}"></div>`).join("")}</div>`; }
+
+// ── i18n: static UI chrome. Data strings (rule names, descriptions, group/
+// severity labels, verdict, units, coverage) are localized server-side via the
+// ?lang= param; this table covers only the labels rendered on the client. ──
+const I18N={
+  ru:{
+    brand:"Вайбометр", sub:"измеритель вайбкодинга", title:"Вайбометр · измеритель вайбкодинга",
+    loading:"ПРОГРЕВ ПРИБОРА · ДВИЖОК ЧИТАЕТ CLAUDE · CODEX · CURSOR…",
+    footer:"ВАЙБОМЕТР · движок ai-engineering-coach (MIT) + RU/EN + Cursor", loadError:"ОШИБКА ЗАГРУЗКИ",
+    tab_overview:"Обзор", tab_antipatterns:"Антипаттерны", tab_consumption:"Расход", tab_code:"Код", tab_activity:"Активность",
+    p_all:"всё время", p_1y:"1 год", p_6m:"6 мес", p_3m:"3 мес", p_1m:"1 мес", p_custom:"период…", p_apply:"OK", p_customLabel:"произвольный период",
+    sec01:"Сектор 01 — общий вайб", sec02:"Сектор 02 — баллы по направлениям", sec03:"Сектор 03 — язык промптов · 🇷🇺 + 🇬🇧", sec04:"Сектор 04 — сбор данных по источникам",
+    vibeScore:"Вайб-балл", kpiRequests:"запросов к ИИ", kpiAiLoc:"строк кода от ИИ", kpiTokens:"токенов сгенерено", kpiSessions:"сессий", sources:"Источники",
+    langRu:"Русский", langEn:"English", langMixed:"Смешанный", covLegend:"✓ собирается · ~ редко · — нет в логах",
+    apAll:"Все антипаттерны · отсортированы по охвату", apExample:"пример",
+    consHead:"Расход · токены и запросы", consGen:"сгенерировано токенов", consCtx:"контекст (вкл. кеш)", consTotal:"всего запросов",
+    consByModel:"Токены по моделям", consBySource:"По источникам", consNoTokens:"токенов нет", consReqShort:"зап.", consTokDay:"Генерация токенов по дням (последние 60)",
+    cursorNote:"Cursor не пишет токены в локальную БД (с янв 2026) — расход по нему не виден, только активность.",
+    codeByLang:"По языкам", codeProjects:"Проекты по запросам",
+    actMode:"Режим работы", actByHour:"Активность по часам · 0–23", actNight:"ночью 0–5", actWeekend:"на выходных", actByDay:"Запросы по дням (последние 60)", actTopProjects:"Топ проектов по активности",
+    recalc:"пересчёт", updated:"обновлено",
+  },
+  en:{
+    brand:"Vibometr", sub:"vibe-coding meter", title:"Vibometr · vibe-coding meter",
+    loading:"WARMING UP · THE ENGINE IS READING CLAUDE · CODEX · CURSOR…",
+    footer:"VIBOMETR · ai-engineering-coach engine (MIT) + RU/EN + Cursor", loadError:"LOAD ERROR",
+    tab_overview:"Overview", tab_antipatterns:"Anti-patterns", tab_consumption:"Spend", tab_code:"Code", tab_activity:"Activity",
+    p_all:"all time", p_1y:"1 year", p_6m:"6 mo", p_3m:"3 mo", p_1m:"1 mo", p_custom:"range…", p_apply:"OK", p_customLabel:"custom range",
+    sec01:"Sector 01 — overall vibe", sec02:"Sector 02 — scores by area", sec03:"Sector 03 — prompt language · 🇷🇺 + 🇬🇧", sec04:"Sector 04 — data collected per source",
+    vibeScore:"Vibe score", kpiRequests:"AI requests", kpiAiLoc:"AI lines of code", kpiTokens:"tokens generated", kpiSessions:"sessions", sources:"Sources",
+    langRu:"Russian", langEn:"English", langMixed:"Mixed", covLegend:"✓ collected · ~ rarely · — not in logs",
+    apAll:"All anti-patterns · sorted by coverage", apExample:"example",
+    consHead:"Spend · tokens and requests", consGen:"tokens generated", consCtx:"context (incl. cache)", consTotal:"total requests",
+    consByModel:"Tokens by model", consBySource:"By source", consNoTokens:"no tokens", consReqShort:"req", consTokDay:"Token generation by day (last 60)",
+    cursorNote:"Cursor doesn't write token counts to its local DB (since Jan 2026) — spend isn't visible for it, only activity.",
+    codeByLang:"By language", codeProjects:"Projects by requests",
+    actMode:"Work rhythm", actByHour:"Activity by hour · 0–23", actNight:"night 0–5", actWeekend:"on weekends", actByDay:"Requests by day (last 60)", actTopProjects:"Top projects by activity",
+    recalc:"recalculating", updated:"updated",
+  },
+};
+const t=(k)=> (I18N[LANG][k] ?? I18N.ru[k] ?? k);
+// Phrases that interleave localized words with numbers.
+const gfoot=(r,s)=> LANG==="ru" ? `по ${fmt(r)} запросам в ${fmt(s)} сессиях` : `across ${fmt(r)} requests in ${fmt(s)} sessions`;
+const apMeta=(p,u,o)=> LANG==="ru" ? `затронуто ${p}% ${u} (${fmt(o)})` : `affected ${p}% of ${u} (${fmt(o)})`;
+const codeHead=(l,b)=> LANG==="ru" ? `Код от ИИ · ${fmt(l)} строк в ${fmt(b)} блоках` : `AI code · ${fmt(l)} lines in ${fmt(b)} blocks`;
+
+const hCol={ Cursor:"linear-gradient(90deg,#4da6ff,#b3dcff)", Claude:"linear-gradient(90deg,#ff8a3c,#ffd0a0)", Codex:"linear-gradient(90deg,#10a37f,#7fe3c8)", Xcode:"linear-gradient(90deg,#9aa1b0,#d4d8e0)" };
+// Data-coverage matrix "source × field": what each source actually provides this period.
+function covMatrix(cov){
+  if(!cov||!cov.harnesses||!cov.harnesses.length) return "";
+  const g={yes:'<span style="color:#6fcf97">✓</span>', rare:'<span style="color:#e8b65a">~</span>', no:'<span style="color:#565b68">—</span>'};
+  const head=`<tr><th></th>${cov.harnesses.map(h=>`<th style="text-align:center;font-family:Oswald;font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:var(--ink-faint);padding:0 12px 10px">${esc(h)}</th>`).join("")}</tr>`;
+  const rows=cov.features.map(f=>`<tr><td style="padding:6px 16px 6px 2px;color:var(--ink);white-space:nowrap">${esc(f.name)}</td>${cov.harnesses.map(h=>`<td style="text-align:center;font-size:16px">${g[f.states[h]]||g.no}</td>`).join("")}</tr>`).join("");
+  const legend=`<div class="cap" style="padding:12px 2px 0;opacity:.7">${t("covLegend")}</div>`;
+  const note=cov.note?`<div class="cap" style="padding:5px 2px 0;opacity:.6">ⓘ ${esc(cov.note)}</div>`:"";
+  return `<div class="panel reveal" style="padding:16px 18px 18px"><table style="border-collapse:collapse;width:100%;font-size:13px">${head}${rows}</table>${legend}${note}</div>`;
+}
+let DATA=null, TAB="overview";
+const TABS=["overview","antipatterns","consumption","code","activity"];
+
+function scrOverview(d){
+  const col=scoreColor(d.score), H=d.totals.byHarness;
+  const harnesses=Object.keys(H).sort((a,b)=>H[b]-H[a]); const maxH=Math.max(...Object.values(H),1);
+  const lang=d.langSplit, lt=(lang.ru+lang.en+lang.mixed+lang.other)||1;
+  return `
+  <div class="seclabel reveal">${t("sec01")}</div>
+  <div class="hero">
+    <div class="panel gauge-panel reveal"><div class="cap"><span>${t("vibeScore")}</span><span>0–100</span></div>
+      <div class="gauge-wrap">${buildGauge(d.score)}<div class="gauge-center"><div class="score" id="scoreNum">0<small>/100</small></div>
+      <div class="verdict" style="color:${col}">${d.verdict}</div><div class="gauge-foot">${gfoot(d.totals.requests,d.totals.sessions)}</div></div></div></div>
+    <div class="hero-side">
+      <div class="kpi-grid">
+        <div class="panel kpi reveal"><div class="v" data-count="${d.totals.requests}">0</div><div class="k">${t("kpiRequests")}</div></div>
+        <div class="panel kpi reveal"><div class="v" data-count="${d.code.aiLoc}">0</div><div class="k">${t("kpiAiLoc")}</div></div>
+        <div class="panel kpi reveal"><div class="v" data-count="${d.tokens.completion}">0</div><div class="k">${t("kpiTokens")}</div></div>
+        <div class="panel kpi reveal"><div class="v" data-count="${d.totals.sessions}">0</div><div class="k">${t("kpiSessions")}</div></div>
+      </div>
+      <div class="panel harness reveal"><div class="cap" style="padding:0 0 4px">${t("sources")}</div>
+        ${harnesses.map(h=>`<div class="row"><span class="nm narrow">${h}</span><span class="bar"><i style="background:${hCol[h]||'#555'}" data-w="${H[h]/maxH*100}"></i></span><span class="ct">${fmt(H[h])}</span></div>`).join("")}</div>
+    </div>
+  </div>
+  <div class="seclabel reveal">${t("sec02")}</div>
+  <div class="groups">${d.groupScores.map(g=>`<div class="panel grp reveal"><div class="gname">${g.groupLabel}</div><div class="gscore" style="color:${scoreColor(g.score)}" data-count="${g.score}">0</div><div class="gtrack"><i style="background:${scoreColor(g.score)}" data-w="${g.score}"></i></div></div>`).join("")}</div>
+  <div class="seclabel reveal">${t("sec03")}</div>
+  <div class="panel reveal" style="padding:18px">
+    <div class="langbar">
+      <div style="flex-grow:${lang.ru}; background:var(--ru)"><span class="lb-label">${pct(lang.ru/lt)}%</span></div>
+      <div style="flex-grow:${lang.en}; background:var(--en)"><span class="lb-label">${pct(lang.en/lt)}%</span></div>
+      <div style="flex-grow:${lang.mixed}; background:var(--mixed)"><span class="lb-label">${lang.mixed>120?pct(lang.mixed/lt)+'%':''}</span></div>
+      <div style="flex-grow:${lang.other||1}; background:#3a3f4c"></div></div>
+    <div class="lang-leg"><span><i style="background:var(--ru)"></i>${t("langRu")} · ${fmt(lang.ru)}</span><span><i style="background:var(--en)"></i>${t("langEn")} · ${fmt(lang.en)}</span><span><i style="background:var(--mixed)"></i>${t("langMixed")} · ${fmt(lang.mixed)}</span></div>
+  </div>
+  <div class="seclabel reveal">${t("sec04")}</div>
+  ${covMatrix(d.coverage)}`;
+}
+
+function scrAntipatterns(d){
+  // The engine already returns only triggered rules — show all of them, don't cut
+  // by share (session-scoped rules are divided by session count and are honestly low).
+  const groups={}; for(const p of d.antiPatterns){ if(!p.occurrences)continue; (groups[p.groupLabel]=groups[p.groupLabel]||[]).push(p); }
+  const order=Object.entries(groups).sort((a,b)=>b[1].length-a[1].length);
+  let html=`<div class="seclabel reveal">${t("apAll")}</div>`;
+  for(const [grp,pats] of order){
+    html+=`<div class="seclabel reveal">${esc(grp)} · ${pats.length}</div><div class="aps">`;
+    html+=pats.map(p=>`<div class="panel ap ${p.severity} reveal"><div class="ah"><span class="nm">${esc(p.name)}</span><span class="sev">${p.severityLabel}</span></div>
+      <div class="meta">${apMeta(pct(p.pct)||'&lt;1', esc(p.unit||""), p.occurrences)}</div>
+      <div class="fix">${esc(p.suggestion)}</div>
+      ${(p.examples&&p.examples.length)?`<div class="meta" style="margin-top:8px; opacity:.8">${t("apExample")}: «${esc(String(p.examples[0]).slice(0,80))}»</div>`:""}
+      <div class="pctbar"><i data-w="${Math.min(100,p.pct*100)}"></i></div></div>`).join("");
+    html+=`</div>`;
+  }
+  return html;
+}
+
+function scrConsumption(d){
+  return `
+  <div class="seclabel reveal">${t("consHead")}</div>
+  <div class="statbig">
+    <div class="panel kpi reveal"><div class="v">${compact(d.tokens.completion)}</div><div class="k">${t("consGen")}</div></div>
+    <div class="panel kpi reveal"><div class="v">${compact(d.tokens.prompt)}</div><div class="k">${t("consCtx")}</div></div>
+    <div class="panel kpi reveal"><div class="v" data-count="${d.totals.requests}">0</div><div class="k">${t("consTotal")}</div></div>
+  </div>
+  <div class="seclabel reveal">${t("consByModel")}</div>
+  <div class="panel bars-panel reveal">${barRows(d.modelStats,{name:m=>m.name,val:m=>m.completion,label:m=>compact(m.completion),color:"linear-gradient(90deg,#10a37f,#7fe3c8)"})}</div>
+  <div class="seclabel reveal">${t("consBySource")}</div>
+  <div class="panel bars-panel reveal">${barRows(d.harnessStats,{name:h=>h.harness,narrow:true,val:h=>h.completion,label:h=>h.completion>0?compact(h.completion):(h.requests?`${fmt(h.requests)} ${t("consReqShort")} · ${t("consNoTokens")}`:"0"),color:"linear-gradient(90deg,#4da6ff,#b3dcff)"})}</div>
+  ${d.harnessStats.some(h=>!h.completion&&h.requests)?`<div class="cap" style="padding:6px 2px 0;opacity:.65">${t("cursorNote")}</div>`:""}
+  <div class="seclabel reveal">${t("consTokDay")}</div>
+  <div class="panel reveal">${dayChart(d.activity.tokensByDay,"tokens",true)}</div>`;
+}
+
+function scrCode(d){
+  return `
+  <div class="seclabel reveal">${codeHead(d.code.aiLoc,d.code.aiBlocks)}</div>
+  <div class="grid2e">
+    <div class="panel bars-panel reveal"><div class="cap" style="padding:0 0 8px">${t("codeByLang")}</div>${barRows(d.code.byLanguage.slice(0,10),{name:l=>l.name,val:l=>l.loc,label:l=>fmt(l.loc),color:"linear-gradient(90deg,#b6ff3c,#e4ff9c)"})}</div>
+    <div class="panel bars-panel reveal"><div class="cap" style="padding:0 0 8px">${t("codeProjects")}</div>${barRows(d.projectStats.slice(0,10),{name:p=>p.name,val:p=>p.requests,label:p=>fmt(p.requests),color:"linear-gradient(90deg,#b07cff,#d9c4ff)"})}</div>
+  </div>`;
+}
+
+function scrActivity(d){
+  const maxHour=Math.max(...d.activity.byHour,1);
+  const totalDays=d.activity.byDay.length, totalReq=d.totals.requests;
+  return `
+  <div class="seclabel reveal">${t("actMode")}</div>
+  <div class="grid2">
+    <div class="panel hours reveal"><div class="cap" style="padding:0 0 6px">${t("actByHour")}</div>
+      <div class="bars">${d.activity.byHour.map((c,h)=>`<div class="h ${h<5?'night':''}" data-hh="${c/maxHour*100}" title="${h}:00 — ${c}"></div>`).join("")}</div>
+      <div class="axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div></div>
+    <div class="mini2">
+      <div class="panel ring-card reveal">${ring(pct(d.activity.lateNightPct),"--mixed")}<div class="info"><div class="v">${pct(d.activity.lateNightPct)}%</div><div class="k">${t("actNight")}</div></div></div>
+      <div class="panel ring-card reveal">${ring(pct(d.activity.weekendPct),"--amber")}<div class="info"><div class="v">${pct(d.activity.weekendPct)}%</div><div class="k">${t("actWeekend")}</div></div></div>
+    </div>
+  </div>
+  <div class="seclabel reveal">${t("actByDay")}</div>
+  <div class="panel reveal">${dayChart(d.activity.byDay,"count",false)}</div>
+  <div class="seclabel reveal">${t("actTopProjects")}</div>
+  <div class="panel bars-panel reveal">${barRows(d.projectStats.slice(0,12),{name:p=>p.name,val:p=>p.requests,label:p=>fmt(p.requests)+" "+t("consReqShort"),color:"linear-gradient(90deg,#4da6ff,#b3dcff)"})}</div>`;
+}
+
+const RENDER={ overview:scrOverview, antipatterns:scrAntipatterns, consumption:scrConsumption, code:scrCode, activity:scrActivity };
+
+function showTab(name){
+  TAB=name;
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("active",b.dataset.t===name));
+  document.getElementById("app").innerHTML=RENDER[name](DATA);
+  requestAnimationFrame(()=>animate());
+  window.scrollTo({top:0,behavior:"instant"});
+}
+
+function animate(){
+  const needle=document.getElementById("needle");
+  if(needle) requestAnimationFrame(()=>{ needle.style.transform="rotate(0deg)"; });
+  const arc=document.getElementById("arcfill");
+  if(arc){ arc.style.transition="stroke-dashoffset 1.6s cubic-bezier(.16,.84,.3,1)"; requestAnimationFrame(()=>arc.style.strokeDashoffset=String(100-DATA.score)); }
+  countUp(document.getElementById("scoreNum"),DATA.score,"<small>/100</small>");
+  document.querySelectorAll("[data-count]").forEach(el=>{ const suffix=el.querySelector("small")?.outerHTML||""; countUp(el,+el.dataset.count,suffix); });
+  setTimeout(()=>{
+    document.querySelectorAll("[data-w]").forEach(i=>i.style.width=i.dataset.w+"%");
+    document.querySelectorAll("[data-hh]").forEach(i=>i.style.height=Math.max(2,i.dataset.hh)+"%");
+    document.querySelectorAll("[data-ring]").forEach(c=>c.style.strokeDashoffset=c.dataset.ring);
+  },120);
+  [...document.querySelectorAll(".reveal")].forEach((el,i)=>setTimeout(()=>el.classList.add("in"),40+i*30));
+}
+function countUp(el,target,suffix=""){ if(!el)return; const dur=1100,t0=performance.now(); function step(t){ const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3); el.innerHTML=fmt(Math.round(target*e))+suffix; if(p<1)requestAnimationFrame(step); } requestAnimationFrame(step); }
+
+// ── Period filter ── applies to everything: score, anti-patterns and tokens are recomputed for the window.
+const PERIODS=["all","1y","6m","3m","1m"];
+let PERIOD="all", CUSTOM=null;
+
+function periodUrl(){
+  if(PERIOD==="custom"&&CUSTOM) return `/api/analysis?period=custom&from=${CUSTOM.from}&to=${CUSTOM.to}&lang=${LANG}`;
+  return `/api/analysis?period=${PERIOD}&lang=${LANG}`;
+}
+function buildPeriods(){
+  const el=document.getElementById("periods");
+  el.innerHTML=PERIODS.map(k=>`<button data-p="${k}" class="${k===PERIOD?'active':''}">${t("p_"+k)}</button>`).join("")
+    +`<button data-p="custom" class="${PERIOD==='custom'?'active':''}">${t("p_custom")}</button>`
+    +`<span id="customRange" style="display:${PERIOD==='custom'?'inline-flex':'none'};gap:6px;align-items:center">
+        <input type="date" id="cFrom" value="${CUSTOM?.from||''}"><span style="color:var(--ink-faint)">—</span><input type="date" id="cTo" value="${CUSTOM?.to||''}"><button data-p="apply">${t("p_apply")}</button></span>`;
+  el.querySelectorAll("button[data-p]").forEach(b=>b.addEventListener("click",()=>onPeriod(b.dataset.p)));
+}
+function onPeriod(p){
+  if(p==="apply"){ const f=document.getElementById("cFrom").value,t2=document.getElementById("cTo").value; if(f&&t2){ CUSTOM={from:f,to:t2}; PERIOD="custom"; load(); } return; }
+  if(p==="custom"){ PERIOD="custom"; buildPeriods(); return; } // show date fields, wait for OK
+  PERIOD=p; buildPeriods(); load();
+}
+function load(){
+  const app=document.getElementById("app");
+  app.classList.add("period-loading");
+  const lbl=PERIOD==="custom"?t("p_customLabel"):t("p_"+PERIOD);
+  document.getElementById("genat").textContent=t("recalc")+" · "+lbl+"…";
+  fetch(periodUrl()).then(r=>r.json()).then(d=>{
+    if(d.error) throw new Error(d.error);
+    DATA=d; app.classList.remove("period-loading");
+    document.getElementById("genat").textContent=t("updated")+" "+new Date(d.generatedAt).toLocaleString(LANG==="ru"?"ru-RU":"en-US")+" · "+d.range.label;
+    document.getElementById("meta").innerHTML=LANG==="ru"?`строк кода от ИИ <b>${fmt(d.code.aiLoc)}</b> · локально, без телеметрии`:`AI lines of code <b>${fmt(d.code.aiLoc)}</b> · local, no telemetry`;
+    showTab(TAB);
+  }).catch(e=>{ app.classList.remove("period-loading"); app.innerHTML=`<div class="loading">${t("loadError")}<br><br><span style="font-size:12px;color:var(--ink-faint)">${esc(String(e))}</span></div>`; });
+}
+
+// Apply static labels and (re)wire tabs / periods / language toggle for the current language.
+function applyStaticI18n(){
+  document.documentElement.lang=LANG;
+  document.title=t("title");
+  document.getElementById("brandName").textContent=t("brand");
+  document.getElementById("brandSub").textContent=t("sub");
+  document.getElementById("footL").textContent=t("footer");
+  document.getElementById("tabs").innerHTML=TABS.map(k=>`<button data-t="${k}" class="${k===TAB?'active':''}">${t("tab_"+k)}</button>`).join("");
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.t)));
+  buildPeriods();
+  document.querySelectorAll(".langtog button").forEach(b=>b.classList.toggle("active",b.dataset.lang===LANG));
+}
+function setLang(l){ if(l===LANG)return; LANG=l; localStorage.setItem("vibometr-lang",l); applyStaticI18n(); load(); }
+
+// Init: wire the language toggle once, set the loading text, then first load.
+document.querySelectorAll(".langtog button").forEach(b=>b.addEventListener("click",()=>setLang(b.dataset.lang)));
+document.querySelector("#app .loading").insertAdjacentText("beforeend",t("loading"));
+applyStaticI18n();
+load();
+</script>
+</body>
+</html>
