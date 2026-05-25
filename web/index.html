@@ -120,7 +120,11 @@
   @keyframes spin { to { transform:rotate(360deg); } }
   .reveal { opacity:0; transform:translateY(14px); transition:opacity .5s ease, transform .5s ease; }
   .reveal.in { opacity:1; transform:none; }
-  footer { margin-top:60px; padding-top:22px; border-top:1px solid var(--line); font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-faint); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  footer { margin-top:60px; padding-top:22px; border-top:1px solid var(--line); font-family:"IBM Plex Mono"; font-size:11px; color:var(--ink-faint); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px 18px; }
+  .tglink { display:inline-flex; align-items:center; gap:7px; font-family:"IBM Plex Mono"; font-size:11px; letter-spacing:.08em; color:var(--ink-faint); text-decoration:none; padding:5px 11px; border:1px solid var(--line-2); border-radius:7px; transition:color .15s, border-color .15s, box-shadow .15s; }
+  .tglink svg { width:13px; height:13px; color:var(--en); transition:transform .15s; }
+  .tglink:hover { color:var(--ink); border-color:var(--en); box-shadow:0 0 18px -8px var(--en); }
+  .tglink:hover svg { transform:translateX(1px); }
 </style>
 </head>
 <body>
@@ -135,7 +139,14 @@
     </header>
     <nav class="tabs" id="tabs"></nav>
     <div id="app"><div class="loading"><div class="pulse"></div></div></div>
-    <footer><span id="footL"></span><span id="genat"></span></footer>
+    <footer>
+      <span id="footL"></span>
+      <a class="tglink" href="https://t.me/atlfreedom" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+        <span id="tgLabel"></span>
+      </a>
+      <span id="genat"></span>
+    </footer>
   </div>
 <script>
 let LANG = localStorage.getItem("vibometr-lang")==="en" ? "en" : "ru";
@@ -178,6 +189,7 @@ const I18N={
     brand:"Вайбометр", sub:"измеритель вайбкодинга", title:"Вайбометр · измеритель вайбкодинга",
     loading:"ПРОГРЕВ ПРИБОРА · ДВИЖОК ЧИТАЕТ CLAUDE · CODEX · CURSOR…",
     footer:"ВАЙБОМЕТР · движок ai-engineering-coach (MIT) + RU/EN + Cursor", loadError:"ОШИБКА ЗАГРУЗКИ",
+    tg:"@atlfreedom · канал про вайбкодинг",
     tab_overview:"Обзор", tab_antipatterns:"Антипаттерны", tab_consumption:"Расход", tab_code:"Код", tab_activity:"Активность",
     p_all:"всё время", p_1y:"1 год", p_6m:"6 мес", p_3m:"3 мес", p_1m:"1 мес", p_custom:"период…", p_apply:"OK", p_customLabel:"произвольный период",
     sec01:"Сектор 01 — общий вайб", sec02:"Сектор 02 — баллы по направлениям", sec03:"Сектор 03 — язык промптов · 🇷🇺 + 🇬🇧", sec04:"Сектор 04 — сбор данных по источникам",
@@ -197,6 +209,7 @@ const I18N={
     brand:"Vibometr", sub:"vibe-coding meter", title:"Vibometr · vibe-coding meter",
     loading:"WARMING UP · THE ENGINE IS READING CLAUDE · CODEX · CURSOR…",
     footer:"VIBOMETR · ai-engineering-coach engine (MIT) + RU/EN + Cursor", loadError:"LOAD ERROR",
+    tg:"@atlfreedom · vibe-coding channel",
     tab_overview:"Overview", tab_antipatterns:"Anti-patterns", tab_consumption:"Spend", tab_code:"Code", tab_activity:"Activity",
     p_all:"all time", p_1y:"1 year", p_6m:"6 mo", p_3m:"3 mo", p_1m:"1 mo", p_custom:"range…", p_apply:"OK", p_customLabel:"custom range",
     sec01:"Sector 01 — overall vibe", sec02:"Sector 02 — scores by area", sec03:"Sector 03 — prompt language · 🇷🇺 + 🇬🇧", sec04:"Sector 04 — data collected per source",
@@ -418,6 +431,7 @@ function applyStaticI18n(){
   document.getElementById("brandName").textContent=t("brand");
   document.getElementById("brandSub").textContent=t("sub");
   document.getElementById("footL").textContent=t("footer");
+  document.getElementById("tgLabel").textContent=t("tg");
   document.getElementById("tabs").innerHTML=TABS.map(k=>`<button data-t="${k}" class="${k===TAB?'active':''}">${t("tab_"+k)}</button>`).join("");
   document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.t)));
   buildPeriods();

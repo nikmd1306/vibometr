@@ -1,5 +1,7 @@
 # Vibometr
 
+[![Telegram](https://img.shields.io/badge/Telegram-vibe--coding-2AABEE?logo=telegram&logoColor=white)](https://t.me/atlfreedom)
+
 **Vibometr measures your vibe-coding.** It reads your local Claude Code, Codex, and Cursor logs, scores how you work with AI, and shows it all on a dashboard — anti-patterns, token spend, activity, and the code your agents wrote.
 
 Everything runs on your machine. **No accounts, no telemetry, nothing leaves your computer.** The tool only reads logs; it never modifies them.
@@ -55,6 +57,10 @@ your logs ──▶ parse (once, cached) ──▶ analyze per period ──▶ 
 ## Privacy
 
 Vibometr makes **zero network requests**. It reads logs locally, analyzes them in memory, and serves the result to `localhost` only. Your prompts, code, and tokens never leave the machine.
+
+## Author
+
+Built by [@nikmd1306](https://github.com/nikmd1306). I write about vibe-coding on Telegram — [**@atlfreedom**](https://t.me/atlfreedom).
 
 ## License
 
